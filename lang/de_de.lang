@@ -1,0 +1,10 @@
+# addon: analyzer de_de
+navigation_analyzer = Analyzer
+
+
+analyzer_view = Analyse und Export
+analyzer_overview = Analyse
+analyzer_export = Export
+
+email = E-Mail
+status = Status
