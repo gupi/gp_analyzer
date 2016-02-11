@@ -1,0 +1,9 @@
+# addon: community en_gb_utf8
+navigation_analyzer = Analyzer
+
+analyzer_view = Analyze And Export
+analyzer_overview = Analyze
+analyzer_export = Export
+
+email = E-Mail
+status = Status
