@@ -79,7 +79,7 @@ class rex_analyzer {
   }
 
   /**
-   * load details od modules into an array
+   * load details of modules into an array
    */
   function loadModUsage() {
     foreach ( $this->modules as $key => $val ) {
@@ -183,10 +183,6 @@ class rex_analyzer {
    */
   function makeElementDetail($cat) {
     $pieces = array ();
-    $pieces [] = '<div id="rex-output">';
-    $pieces [] = '<div class="rex-addon-output">';
-    $pieces [] = '<h2 class="rex-hl2">Kategorie-Details</h2>';
-    $pieces [] = '<div class="rex-addon-content">';
     $pieces [] = "<hr>";
     $pieces [] = "<h2>" . $cat->getName () . "</h2>";
     $articles = $cat->getArticles ();
@@ -200,10 +196,7 @@ class rex_analyzer {
       $pieces [] = $this->getSlicesOfArticle ( $art );
       $this->temp_usage [$art->getTemplateId ()] ['articles'] [] = $art->getId ();
     }
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    return join ( "\n", $pieces );
+    return wrap_rex_output("Kategorie-Details",  join ( "\n", $pieces ));
   }
 
   /**
@@ -262,10 +255,6 @@ class rex_analyzer {
    */
   function getFullAnalyze() {
     $pieces = array ();
-    $pieces [] = '<div id="rex-output">';
-    $pieces [] = '<div class="rex-addon-output">';
-    $pieces [] = '<h2 class="rex-hl2">Navigation zu den Kategorie Details</h2>';
-    $pieces [] = '<div class="rex-addon-content">';
     $pieces [] = '<div id="analyze">';
     $pieces [] = '<ul class="analyze0">';
     $pieces [] = '<li><a href="#t_overview">Templates</a>';
@@ -301,10 +290,7 @@ class rex_analyzer {
     }
     $pieces [] = '</ul>';
     $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    return join ( "\n", $pieces );
+    return wrap_rex_output("Navigation zu den Kategorie Details", join ( "\n", $pieces ));
   }
 
   /**
@@ -312,16 +298,14 @@ class rex_analyzer {
    * @return string
    */
   function showTemplates() {
+    $style = array ();
+    $style [] = "<style scoped>";
+    $style [] = "#t_overview table td.first {width:90px !important;}";
+    $style [] = "#t_overview table td.right {text-align:right;}";
+    $style [] = "#t_overview table td {vertical-align:top;}";
+    $style [] = "</style>";
+    
     $pieces = array ();
-    $pieces [] = "<style scoped>";
-    $pieces [] = "#t_overview table td.first {width:90px !important;}";
-    $pieces [] = "#t_overview table td.right {text-align:right;}";
-    $pieces [] = "#t_overview table td {vertical-align:top;}";
-    $pieces [] = "</style>";
-    $pieces [] = '<div id="rex-output">';
-    $pieces [] = '<div class="rex-addon-output">';
-    $pieces [] = '<h2 class="rex-hl2">Template - Übersicht</h2>';
-    $pieces [] = '<div class="rex-addon-content">';
     $pieces [] = '<div id="t_overview">';
     foreach ( $this->temp_usage as $key => $val ) {
       $pieces [] = "<h4><b>Template: </b> | <b>ID: </b>" . $key . " | <b>Name: </b>" . $this->templates [$key] ['name'] . "</h4>";
@@ -357,11 +341,8 @@ class rex_analyzer {
       $pieces [] = "</table>";
       $pieces [] = "<hr>";
     }
-    $pieces [] = "</div>";
     $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    return join ( "\n", $pieces );
+    return join ( "\n", $style ).wrap_rex_output("Template - Übersicht", join ( "\n", $pieces ));
   }
 
   /**
@@ -369,16 +350,14 @@ class rex_analyzer {
    * @return string
    */
   function showModules() {
+    $style = array ();
+    $style [] = "<style scoped>";
+    $style [] = "#m_overview table td.first {width:60px !important;}";
+    $style [] = "#m_overview table td.right {text-align:right;}";
+    $style [] = "#m_overview table td {vertical-align:top;}";
+    $style [] = "</style>";
+
     $pieces = array ();
-    $pieces [] = "<style scoped>";
-    $pieces [] = "#m_overview table td.first {width:60px !important;}";
-    $pieces [] = "#m_overview table td.right {text-align:right;}";
-    $pieces [] = "#m_overview table td {vertical-align:top;}";
-    $pieces [] = "</style>";
-    $pieces [] = '<div id="rex-output">';
-    $pieces [] = '<div class="rex-addon-output">';
-    $pieces [] = '<h2 class="rex-hl2">Module - Übersicht</h2>';
-    $pieces [] = '<div class="rex-addon-content">';
     $pieces [] = '<div id="m_overview">';
     foreach ( $this->mod_usage as $key => $val ) {
       $pieces [] = "<h4><b>Modul: </b> | <b>ID: </b>" . $key . " | <b>Name: </b>" . $this->modules [$key] ['name'] . " | <b>Status: </b>" . (count ( $val ['articles'] ) ? " verwendet von " . count ( $val ['articles'] ) . " Artikel(n)" : "") . "</h4>";
@@ -434,11 +413,8 @@ class rex_analyzer {
       $pieces [] = '</table>';
       $pieces [] = "<hr>";
     }
-    $pieces [] = "</div>";
     $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    $pieces [] = '</div>';
-    return join ( "\n", $pieces );
+    return join ( "\n", $style ).wrap_rex_output("Module - Übersicht", join ( "\n", $pieces ));
   }
 }
  
