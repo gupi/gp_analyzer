@@ -13,6 +13,7 @@ class rex_analyzer {
   var $temp_usage;
   var $dollar_rex_pattern;
   var $rex_pattern;
+  var $value_pattern;
   var $db;
 
   function __construct() {
@@ -22,6 +23,7 @@ class rex_analyzer {
     $this->temp_usage = array ();
     $this->dollar_rex_pattern = '|\$REX\s*\[[\'\"](.*)[\'\"]\]|';
     $this->rex_pattern = '(REX_(\w*\[)\d{1,2}\]|REX_(\w*))';
+    $this->value_pattern = '|[^_](VALUE\[\d*\])|';
     $this->loadModules ();
     $this->loadModUsage ();
     $this->loadTemplates ();
@@ -38,8 +40,11 @@ class rex_analyzer {
       $this->mod_usage [$val ['id']] = array (
         'dollarRexInput' => array (),
         'dollarRexOutput' => array (),
+        'dRI' => array (),
+        'dRO' => array (),
         'RexInput' => array (),
         'RexOutput' => array (),
+        'VALUE' => array(),
         'articles' => array () 
       );
     }
@@ -86,15 +91,20 @@ class rex_analyzer {
       $matches = array ();
       preg_match_all ( $this->dollar_rex_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
       $this->mod_usage [$key] ['dollarRexInput'] = array_keys ( array_flip ( $matches [0] ) );
+      $this->mod_usage [$key] ['dRI'] = array_keys ( array_flip ( $matches [1] ) );
       $matches = array ();
       preg_match_all ( $this->dollar_rex_pattern, $val ['ausgabe'], $matches, PREG_PATTERN_ORDER );
       $this->mod_usage [$key] ['dollarRexOutput'] = array_keys ( array_flip ( $matches [0] ) );
+      $this->mod_usage [$key] ['dRO'] = array_keys ( array_flip ( $matches [1] ) );
       $matches = array ();
       preg_match_all ( $this->rex_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
       $this->mod_usage [$key] ['RexInput'] = array_keys ( array_flip ( $matches [0] ) );
       $matches = array ();
       preg_match_all ( $this->rex_pattern, $val ['ausgabe'], $matches, PREG_PATTERN_ORDER );
       $this->mod_usage [$key] ['RexOutput'] = array_keys ( array_flip ( $matches [0] ) );
+      $matches = array ();
+      preg_match_all ( $this->value_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
+      $this->mod_usage [$key] ['VALUE'] = array_keys ( array_flip ( $matches [1] ) );
     }
   }
 
@@ -377,6 +387,15 @@ class rex_analyzer {
       $pieces [] = '<td>';
       $glue = "";
       foreach ( $val ['RexInput'] as $v ) {
+        $pieces [] = $glue . $v;
+        $glue = ", ";
+      }
+      $pieces [] = '</td>';
+      $pieces [] = "</tr>";
+      $pieces [] = '<tr><td class="first right"><b>VALUE :</b>';
+      $pieces [] = '<td>';
+      $glue = "";
+      foreach ( $val ['VALUE'] as $v ) {
         $pieces [] = $glue . $v;
         $glue = ", ";
       }
