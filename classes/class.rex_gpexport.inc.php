@@ -25,14 +25,16 @@ class rex_exporter {
       rex_article_slice,
       rex_template,
       rex_module,
-      rex_module_action 
+      rex_module_action,
+      rex_clang
     );
     $this->dest_tables = array (
       r4_article,
       r4_article_slice,
       r4_template,
       r4_module,
-      r4_module_action 
+      r4_module_action,
+      r4_clang,
     );
     $this->createDestination ( TRUE );
     foreach ( $this->source_tables as $table ) {
@@ -49,11 +51,30 @@ class rex_exporter {
     }
     $this->analyze = new rex_analyzer ();
     $this->setSlicePriority ();
-    $this->setOffsetToValue ( 1, $this->dest_tables [0], "clang_id" );
+    $this->adjustLanguageRelations();
+//     $this->setOffsetToValue ( 1, $this->dest_tables [0], "clang_id" );
     $this->makeUpModules ();
     $this->export_files = array ();
   }
 
+  function adjustLanguageRelations() {
+    /* add Column to language tabel */
+    $this->db->setQuery("TRUNCATE TABLE `".$this->dest_tables[5]."`;");
+    $this->db->setQuery("ALTER TABLE `".$this->dest_tables[5]."` ADD COLUMN `old_id` INT( 10 )");
+    $this->db->setQuery("ALTER TABLE `".$this->dest_tables[5]."` ADD COLUMN `priority` INT( 10 )");
+    $this->db->setQuery("ALTER TABLE `".$this->dest_tables[5]."` ADD COLUMN `code` VARCHAR( 255 )");
+    
+    /* update language table data */
+    foreach ($this->analyze->languages as $v) {
+      $this->db->setQuery("INSERT INTO `".$this->dest_tables[5]."` SET `id` = ".$v['new_id'].",`old_id` = ".$v['id'].",`priority` = ".$v['new_id'].",`code` = '".substr($v['name'],0,2)."',`name` = '".$v['name']."';");
+    }
+    /* update articles tabe with new (r5 spec) clang reference */
+    $clang = $this->db->getArray("SELECT * FROM `".$this->dest_tables[5]."` ORDER BY `priority` DESC");
+    foreach($clang as $v) {
+      $this->db->setQuery("UPDATE `".$this->dest_tables[0]."` SET `clang_id` = ".$v['priority']." WHERE `clang_id`= ".$v['old_id'].";");
+    }
+    $this->db->setQuery("ALTER TABLE `".$this->dest_tables[5]."` DROP COLUMN `old_id`");
+  }
   function makeUpModules() {
     foreach ( $this->analyze->mod_usage as $k => $v ) {
       /* VALUE -> REX_INPUT_VALUE */

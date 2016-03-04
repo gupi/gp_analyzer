@@ -8,6 +8,7 @@
 class rex_analyzer {
   var $html_elements;
   var $modules;
+  var $languages;
   var $mod_usage;
   var $templates;
   var $temp_usage;
@@ -28,8 +29,18 @@ class rex_analyzer {
     $this->loadModUsage ();
     $this->loadTemplates ();
     $this->loadTempUsage ();
+    $this->loadLanguages ();
   }
 
+  /**
+   * laod all language records into an array;
+   */
+  function loadLanguages() {
+    $this->languages = $this->db->getArray ( "SELECT * FROM `rex_clang` ORDER BY `id`" );
+    foreach ($this->languages as $k=>$l) {
+      $this->languages[$k]['new_id'] = $k+1;
+    } 
+  }
   /**
    * laod all modules records into an array;
    */
@@ -44,7 +55,12 @@ class rex_analyzer {
         'dRO' => array (),
         'RexInput' => array (),
         'RexOutput' => array (),
-        'VALUE' => array(),
+        'dri_line' => array (),
+        'dro_line' => array (),
+        'ri_line' => array (),
+        'ro_line' => array (),
+        'v_line' => array (),
+        't_line' => array (),
         'articles' => array () 
       );
     }
@@ -61,6 +77,9 @@ class rex_analyzer {
         'dollarRex' => array (),
         'templates' => array (),
         'PHP' => array (),
+        'dr_line' => array (),
+        'te_line' => array (),
+        'php_line' => array (),
         'articles' => array () 
       );
     }
@@ -72,15 +91,25 @@ class rex_analyzer {
   function loadTempUsage() {
     foreach ( $this->templates as $key => $val ) {
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['content'], $matches, PREG_PATTERN_ORDER );
-      $this->temp_usage [$key] ['dollarRex'] = array_keys ( array_flip ( $matches [0] ) );
+      preg_match_all ( $this->dollar_rex_pattern, $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->temp_usage [$key] ['dollarRex'][] = $match [0][0];
+        $this->temp_usage [$key] ['dr_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
+      }
       $matches = array ();
-      preg_match_all ( '|REX_TEMPLATE\[(\d*)\]|', $val ['content'], $matches, PREG_PATTERN_ORDER );
-      $this->temp_usage [$key] ['templates'] = array_keys ( array_flip ( $matches [1] ) );
+      preg_match_all ( '|REX_TEMPLATE\[(\d*)\]|', $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->temp_usage [$key] ['templates'][] = $match [0][0];
+        $this->temp_usage [$key] ['te_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
+      }
+     
       $matches = array ();
-      preg_match_all ( '|<\?php(.*?)\?>|', $val ['content'], $matches, PREG_PATTERN_ORDER );
-      $this->temp_usage [$key] ['PHP'] = $matches [1];
-    }
+      preg_match_all ( '|<\?php(.*?)\?>|', $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      foreach($matches as $match) {
+        $this->temp_usage [$key] ['PHP'][] = $match [1][0];
+        $this->temp_usage [$key] ['php_line'][$match [1][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
+      }
+    }    
   }
 
   /**
@@ -89,22 +118,37 @@ class rex_analyzer {
   function loadModUsage() {
     foreach ( $this->modules as $key => $val ) {
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
-      $this->mod_usage [$key] ['dollarRexInput'] = array_keys ( array_flip ( $matches [0] ) );
-      $this->mod_usage [$key] ['dRI'] = array_keys ( array_flip ( $matches [1] ) );
+      preg_match_all ( $this->dollar_rex_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['dollarRexInput'][] = $match [0][0];
+        $this->mod_usage [$key] ['dri_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [0] [1] ) ) ) + 1;
+        $this->mod_usage [$key] ['dRI'][] = $match [1][0] ;
+      }
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['ausgabe'], $matches, PREG_PATTERN_ORDER );
-      $this->mod_usage [$key] ['dollarRexOutput'] = array_keys ( array_flip ( $matches [0] ) );
-      $this->mod_usage [$key] ['dRO'] = array_keys ( array_flip ( $matches [1] ) );
+      preg_match_all ( $this->dollar_rex_pattern, $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['dollarRexOutput'][] = $match [0][0];
+        $this->mod_usage [$key] ['dro_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['ausgabe'], 0, $match [0] [1] ) ) ) + 1;
+        $this->mod_usage [$key] ['dRO'][] = $match [1][0] ;
+      }
       $matches = array ();
-      preg_match_all ( $this->rex_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
-      $this->mod_usage [$key] ['RexInput'] = array_keys ( array_flip ( $matches [0] ) );
+      preg_match_all ( $this->rex_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['RexInput'][] =  $match [0][0] ;
+        $this->mod_usage [$key] ['ri_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [0] [1] ) ) ) + 1;
+      }
       $matches = array ();
-      preg_match_all ( $this->rex_pattern, $val ['ausgabe'], $matches, PREG_PATTERN_ORDER );
-      $this->mod_usage [$key] ['RexOutput'] = array_keys ( array_flip ( $matches [0] ) );
+      preg_match_all ( $this->rex_pattern, $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['RexOutput'][] =  $match [0][0] ;
+        $this->mod_usage [$key] ['ro_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['ausgabe'], 0, $match [0] [1] ) ) ) + 1;
+      }
       $matches = array ();
-      preg_match_all ( $this->value_pattern, $val ['eingabe'], $matches, PREG_PATTERN_ORDER );
-      $this->mod_usage [$key] ['VALUE'] = array_keys ( array_flip ( $matches [1] ) );
+      preg_match_all ( $this->value_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['VALUE'][] = $match [1][0] ;
+        $this->mod_usage [$key] ['v_line'][$match [1][0]][] = $match [1] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [1] [1] ) ) ) + 1;
+      }
     }
   }
 
@@ -119,11 +163,11 @@ class rex_analyzer {
    * @return string
    */
   function makUp($cat) {
-    $anker = "#" . substr ( $cat->getUrl (), 1 );
+    $anker = "#" . $cat->getUrl ();
     $anker = str_replace ( "/", "_", $anker );
     $anker = str_replace ( ".html", "", $anker );
-    if ($anker == "#") {
-      $anker .= strtolower ( $cat->getName () );
+    if ($anker == "# ") {
+      $anker = "#".strtolower ( $cat->getName () );
     }
     $this->makeElement ( $anker, $cat );
     return $anker;
@@ -148,7 +192,7 @@ class rex_analyzer {
    * @return string
    */
   function showElements() {
-    return "<div id='elements'>" . join ( "\n", $this->html_elements ) . "</div>";
+    return wrap_rex_out("Kategorien","<div id='elements'>\n" . join ( "\n", $this->html_elements ) . "</div>\n");
   }
 
   /**
@@ -199,14 +243,14 @@ class rex_analyzer {
     foreach ( $articles as $art ) {
       $status = ($art->isOnline () ? "online" : "offline");
       if (! $art->isStartarticle ()) {
-        $pieces [] = "<h4><b>Artikel: </b>" . $art->getName () . " | <b>Id: </b>" . $art->getId () . "  | <b>Template: </b>" . $this->showTemplateName ( $art->getTemplateId () ) . " | <b>Status: </b> " . $status . "</h4>";
+        $pieces [] = "<h4><b>Artikel: </b>" . $art->getName () . " | <b>Id: </b>" . $art->getId () . "  | <b>Template: </b>" . $this->showTemplateName ( $art->getTemplateId () ) . " | <b>Status: </b> " . $status . " | <b>Sprache: </b> " .$this->languages[$art->getClang()]['name'] . "</h4>";
       } else {
-        $pieces [] = "<h4><b>Startartikel: </b>" . $art->getName () . " | <b>Id: </b>" . $art->getId () . "  | <b>Template: </b>" . $this->showTemplateName ( $art->getTemplateId () ) . " | <b>Status: </b> " . $status . "</h4>";
+        $pieces [] = "<h4><b>Startartikel: </b>" . $art->getName () . " | <b>Id: </b>" . $art->getId () . "  | <b>Template: </b>" . $this->showTemplateName ( $art->getTemplateId () ) . " | <b>Status: </b> " . $status .  " | <b>Sprache: </b> " . $this->languages[$art->getClang()]['name'] . "</h4>";
       }
       $pieces [] = $this->getSlicesOfArticle ( $art );
       $this->temp_usage [$art->getTemplateId ()] ['articles'] [] = $art->getId ();
     }
-    return wrap_rex_output("Kategorie-Details",  join ( "\n", $pieces ));
+    return wrap_rex_out ( "Kategorie-Details", join ( "\n", $pieces ) );
   }
 
   /**
@@ -261,179 +305,214 @@ class rex_analyzer {
 
   /**
    * provides the navigation to all details of the category/article/slice structure of the site
+   * 
    * @return string
    */
   function getFullAnalyze() {
     $pieces = array ();
-    $pieces [] = '<div id="analyze">';
     $pieces [] = '<ul class="analyze0">';
+    $pieces [] = '<li><a href="#l_overview">Sprachen</a>';
+    $pieces [] = '<li><a href="#a_overview">Addons</a>';
     $pieces [] = '<li><a href="#t_overview">Templates</a>';
     $pieces [] = '<li><a href="#m_overview">Modules</a>';
     $pieces [] = '</ul>';
-    $pieces [] = '<ul class="analyze1">';
-    foreach ( OOCategory::getRootCategories () as $lev1 ) {
-      $pieces [] = '<li><a href="' . $this->makUp ( $lev1 ) . '">' . $lev1->getName () . '</a>';
-      if (count ( $lev1->getChildren () ) > 0) {
-        $pieces [] = '<ul class="analyze2">';
-        foreach ( $lev1->getChildren () as $lev2 ) {
-          $pieces [] = '<li><a href="' . $this->makUp ( $lev2 ) . '">' . $lev2->getName () . '</a>'; // *******
-          if (count ( $lev2->getChildren () ) > 0) {
-            $pieces [] = '<ul class="analyze3">';
-            foreach ( $lev2->getChildren () as $lev3 ) {
-              $pieces [] = '<li><a href="' . $this->makUp ( $lev3 ) . '">' . $lev3->getName () . '</a>';
-              if (count ( $lev3->getChildren () ) > 0) {
-                $pieces [] = '<ul class="analyze4">';
-                foreach ( $lev3->getChildren () as $lev4 ) {
-                  $pieces [] = '<li><a href="' . $this->makUp ( $lev4 ) . '">' . $lev4->getName () . '</a>';
+    foreach ($this->languages as $l) {
+      $pieces [] = '<hr>';
+      $pieces [] = '<b>'.$l['name'].'</b><br>';
+      $pieces [] = '<ul class="analyze1">';
+      $clang = $l['id'];
+      foreach ( OOCategory::getRootCategories (FALSE,$clang) as $lev1 ) {
+        $pieces [] = '<li><a href="' . $this->makUp ( $lev1 ) . '">' . $lev1->getName () . '</a>';
+        if (count ( $lev1->getChildren () ) > 0) {
+          $pieces [] = '<ul class="analyze2">';
+          foreach ( $lev1->getChildren () as $lev2 ) {
+            $pieces [] = '<li><a href="' . $this->makUp ( $lev2 ) . '">' . $lev2->getName () . '</a>'; // *******
+            if (count ( $lev2->getChildren () ) > 0) {
+              $pieces [] = '<ul class="analyze3">';
+              foreach ( $lev2->getChildren () as $lev3 ) {
+                $pieces [] = '<li><a href="' . $this->makUp ( $lev3 ) . '">' . $lev3->getName () . '</a>';
+                if (count ( $lev3->getChildren () ) > 0) {
+                  $pieces [] = '<ul class="analyze4">';
+                  foreach ( $lev3->getChildren () as $lev4 ) {
+                    $pieces [] = '<li><a href="' . $this->makUp ( $lev4 ) . '">' . $lev4->getName () . '</a>';
+                  }
+                  $pieces [] = '</ul>';
                 }
-                $pieces [] = '</ul>';
+                $pieces [] = '</li>';
               }
-              $pieces [] = '</li>';
+              $pieces [] = '</ul>';
             }
-            $pieces [] = '</ul>';
+            $pieces [] = '</li>';
           }
-          $pieces [] = '</li>';
+          $pieces [] = '</ul>';
         }
-        $pieces [] = '</ul>';
+        $pieces [] = '</li>';
       }
-      $pieces [] = '</li>';
+      $pieces [] = '</ul>';
     }
-    $pieces [] = '</ul>';
-    $pieces [] = '</div>';
-    return wrap_rex_output("Navigation zu den Kategorie Details", join ( "\n", $pieces ));
+    return wrap_rex_out ( "Navigation zu den Details", join ( "\n", $pieces ),"analyze" );
   }
 
   /**
    * shows all collected details of the available templates
+   * 
    * @return string
    */
   function showTemplates() {
     $style = array ();
     $style [] = "<style scoped>";
-    $style [] = "#t_overview table td.first {width:90px !important;}";
-    $style [] = "#t_overview table td.right {text-align:right;}";
+    $style [] = "#t_overview table td.first {font-weight:bold !important;}";
+    $style [] = "#t_overview table td {padding:2px 5px;}";
     $style [] = "#t_overview table td {vertical-align:top;}";
     $style [] = "</style>";
     
     $pieces = array ();
-    $pieces [] = '<div id="t_overview">';
+    
     foreach ( $this->temp_usage as $key => $val ) {
       $pieces [] = "<h4><b>Template: </b> | <b>ID: </b>" . $key . " | <b>Name: </b>" . $this->templates [$key] ['name'] . "</h4>";
       $pieces [] = '<table>';
-      $pieces [] = '<tr><td class="first right"><b>$REX :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['dollarRex'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+      foreach ($val['dr_line'] as $f=>$l) {
+        $pieces [] = '<tr>';
+        $pieces[] = '<td class="first">$REX</td><td>'.$f .'</td><td>Zeile: '.join("; ",$l).'</td></tr>';
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first right"><b>PHP :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['PHP'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = "<br>";
+      foreach ($val['te_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>TEMPLATES</td><td>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first right"><b>Templates :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['templates'] as $v ) {
-        $pieces [] = $glue . $this->templates [$v] ['name'];
-        $glue = ", ";
-      }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      
+      foreach ($val['php_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>PHP</td><td>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
+      }            
       $pieces [] = "</table>";
       $pieces [] = "<hr>";
     }
-    $pieces [] = '</div>';
-    return join ( "\n", $style ).wrap_rex_output("Template - Übersicht", join ( "\n", $pieces ));
+    $pieces [] = "<br>" . $this->showTopButton ();
+    return join ( "\n", $style ) . wrap_rex_out ( "Template - Übersicht", join ( "\n", $pieces ),"t_overview" );
   }
 
   /**
    * shows all collected details of the available modules
+   * 
    * @return string
    */
   function showModules() {
     $style = array ();
     $style [] = "<style scoped>";
-    $style [] = "#m_overview table td.first {width:60px !important;}";
+    $style [] = "#m_overview table td.first {width:200px !important;}";
     $style [] = "#m_overview table td.right {text-align:right;}";
     $style [] = "#m_overview table td {vertical-align:top;}";
     $style [] = "</style>";
 
-    $pieces = array ();
-    $pieces [] = '<div id="m_overview">';
-    foreach ( $this->mod_usage as $key => $val ) {
-      $pieces [] = "<h4><b>Modul: </b> | <b>ID: </b>" . $key . " | <b>Name: </b>" . $this->modules [$key] ['name'] . " | <b>Status: </b>" . (count ( $val ['articles'] ) ? " verwendet von " . count ( $val ['articles'] ) . " Artikel(n)" : "") . "</h4>";
-      
-      $pieces [] = '<table>';
-      $pieces [] = '<tr><td class="first"><b>Input</b></td><td></td></tr>';
-      $pieces [] = '<tr><td class="first right"><b>$REX :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['dollarRexInput'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+    $pieces = array();
+    foreach($this->mod_usage as $k=>$v) {
+      $pieces [] = "<b>Module: ".$this->modules[$k]['name']. "</b><br>";
+      $pieces [] = "<table>";
+      $pieces [] = "<thead><tr><th colspan='2'>Eingabe:</th></tr></tbody>";
+      $pieces [] = "<tbody>";
+      foreach ($v['dri_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first right"><b>REX :</b>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['RexInput'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+      foreach ($v['ri_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first right"><b>VALUE :</b>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['VALUE'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+      foreach ($v['v_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first"><b>Output</b></td><td></td></tr>';
-      $pieces [] = '<tr><td class="first right"><b>$REX :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['dollarRexOutput'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+      $pieces [] = "</tbody></table><hr>";
+      $pieces [] = "<table>";
+      $pieces [] = "<thead><tr><th colspan='2'>Ausgabe:</th></tr></tbody>";
+      $pieces [] = "<tbody>";
+      foreach ($v['dro_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first right"><b>REX :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['RexOutput'] as $v ) {
-        $pieces [] = $glue . $v;
-        $glue = ", ";
+      foreach ($v['ro_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '<tr><td class="first"><b>Artikel :</b></td>';
-      $pieces [] = '<td>';
-      $glue = "";
-      foreach ( $val ['articles'] as $v ) {
-        $pieces [] = $glue . OOArticle::getArticleById ( $v )->getName ();
-        $glue = ", ";
-      }
-      $pieces [] = '</td>';
-      $pieces [] = "</tr>";
-      $pieces [] = '</table>';
-      $pieces [] = "<hr>";
+      $pieces [] = "</tbody></table><hr>";
     }
-    $pieces [] = '</div>';
-    return join ( "\n", $style ).wrap_rex_output("Module - Übersicht", join ( "\n", $pieces ));
+    $pieces [] = "<br>" . $this->showTopButton ();
+    return join ( "\n", $style ) . wrap_rex_out ( "Module - Übersicht", join ( "\n", $pieces ),"m_overview" );
+  }
+  function showLanguages() {
+    $style = array ();
+    $style [] = "<style scoped>";
+    $style [] = "#l_overview table td,#l_overview table th {vertical-align:top;padding:2px 6px;}";
+    $style [] = "#l_overview table td.text-center {text-align:center;}";
+    $style [] = "</style>";
+    
+    $pieces = array();
+//     $pieces [] = '<div id="l_overview">';
+    
+    $pieces [] = '<table>';
+    $pieces [] = '<thead>';
+    $pieces [] = '<tr>';
+    $pieces [] = '<th>ID (r4)</th><th>Name</th><th>Rev.</th><th>ID (r5)</th>';
+    $pieces [] = '</tr>';
+    $pieces [] = '</thead>';
+    foreach($this->languages as $k=>$l) {
+      $pieces [] = '<tbody>';
+      $pieces [] = '<tr>';
+      $pieces [] = '<td class="text-center">'.$l['id'].'</td>';
+      $pieces [] = '<td class="text-center">'.$l['name'].'</td>';
+      $pieces [] = '<td class="text-center">'.($l['rev']?$l['rev']:"-").'</td>';
+      $pieces [] = '<td class="text-center">'.$l['new_id'].'</td>';
+      $pieces [] = '</tr>';
+      $pieces [] = '</tbody>';
+    }
+    $pieces [] = '</table>';
+//     $pieces [] = '<pre>';
+//     $pieces [] = print_r($this->languages,TRUE);
+//     $pieces [] = '</pre>';
+    $pieces [] = "<br>" . $this->showTopButton ();
+//     $pieces [] = '</div>';
+    return join ( "\n", $style ) . wrap_rex_out("Sprachen - Übersicht", join ( "\n", $pieces ),"l_overview");
+  }
+  function showAddons() {
+    GLOBAL $REX;
+    $base = $REX['ADDON']['install'];
+    $addons = array();
+    foreach ($base as $addon=>$inst) {
+      $addons [$addon]['inst'] = ($inst?"X":"");
+      $addons [$addon]['act'] = (OOAddon::isActivated($addon)?"X":"");
+      $addons [$addon]['sys'] = (OOAddon::isSystemAddon($addon) ?"X":"");
+      $addons [$addon]['autor'] = OOAddon::getAuthor($addon);
+    }
+
+    $style = array ();
+    $style [] = "<style scoped>";
+    $style [] = "#a_overview table td,#a_overview table th {vertical-align:top;padding:2px 6px;}";
+    $style [] = "#a_overview table td.text-center {text-align:center;}";
+    $style [] = "</style>";
+    
+    $pieces = array();
+    $pieces [] = "<table>";
+    $pieces [] = "<thead><tr><th>Addon</th><th>Installiert</th><th>Aktiviert</th><th>System</th><th>Author</th></tr></thead>";
+    $pieces [] = "<tbody>";
+    foreach($addons as $key=>$val) {
+      $pieces [] = "<tr>";
+      $pieces [] = "<td><b><i>".$key."</i></b></td>";
+      $pieces [] = "<td class='text-center'>".$val['inst']."</td>";
+      $pieces [] = "<td class='text-center'>".$val['act']."</td>";
+      $pieces [] = "<td class='text-center'>".$val['sys']."</td>";
+      $pieces [] = "<td>".$val['autor']."</td>";
+      $pieces [] = "</tr>";
+    }
+    $pieces [] = "</tbody></table>";
+    $pieces [] = "<br>" . $this->showTopButton ();
+    return join ( "\n", $style ) . wrap_rex_out("Addons - Übersicht", join ( "\n", $pieces ),"a_overview");
   }
 }
  

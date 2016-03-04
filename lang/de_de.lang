@@ -1,5 +1,5 @@
-# addon: analyzer de_de
-navigation_analyzer = Analyzer
+# addon: gp_analyzer de_de
+navigation_gp_analyzer = Analyzer
 
 
 analyzer_view = Analyse und Export
