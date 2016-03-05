@@ -196,37 +196,6 @@ class rex_analyzer {
   }
 
   /**
-   * collection of all $REX_nnn variables found in $subject
-   *
-   * @param string $subject          
-   * @return string
-   */
-  function showDollarREX($subject) {
-    $pieces = array ();
-    $found = preg_match_all ( $this->dollar_rex_pattern, $subject, $matches, PREG_PATTERN_ORDER );
-    for($i = 0; $i < $found; $i ++) {
-      $pieces [] = "<h6> ---> " . $matches [0] [$i] . "</h6>";
-    }
-    return join ( "\n", $pieces );
-  }
-
-  /**
-   * collection and preparation of all REX_NNN constants and REX_VALUE/REX_HTML_VALUE/...
-   * found in $subject
-   *
-   * @param string $subject          
-   * @return string
-   */
-  function showREX($subject) {
-    $pieces = array ();
-    $found = preg_match_all ( $this->rex_pattern, $subject, $matches, PREG_PATTERN_ORDER );
-    for($i = 0; $i < $found; $i ++) {
-      $pieces [] = "<h6> ---> " . $matches [0] [$i] . "</h6>";
-    }
-    return join ( "\n", $pieces );
-  }
-
-  /**
    * preparation of category details
    * called by makeElement()
    *
@@ -287,11 +256,19 @@ class rex_analyzer {
       $this->mod_usage [$mid] ['articles'] [] = $art->getId ();
       $pieces [] = "<h4> - Slice: " . $slice->getId () . " | Module: " . $mod ['name'] . "</h4>";
       $pieces [] = "<h5>Modul-Eingabe</h5>";
-      $pieces [] = $this->showDollarREX ( $mod ['eingabe'] );
-      $pieces [] = $this->showREX ( $mod ['eingabe'] );
+      foreach($this->mod_usage[$mid]['dri_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
+      foreach($this->mod_usage[$mid]['ri_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
       $pieces [] = "<h5>Modul-Ausgabe</h5>";
-      $pieces [] = $this->showDollarREX ( $mod ['ausgabe'] );
-      $pieces [] = $this->showREX ( $mod ['ausgabe'] );
+      foreach($this->mod_usage[$mid]['dro_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
+      foreach($this->mod_usage[$mid]['ro_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
       $pieces [] = "<hr>";
     }
     return join ( "\n", $pieces );
@@ -451,9 +428,7 @@ class rex_analyzer {
     $style [] = "#l_overview table td.text-center {text-align:center;}";
     $style [] = "</style>";
     
-    $pieces = array();
-//     $pieces [] = '<div id="l_overview">';
-    
+    $pieces = array();    
     $pieces [] = '<table>';
     $pieces [] = '<thead>';
     $pieces [] = '<tr>';
@@ -471,11 +446,7 @@ class rex_analyzer {
       $pieces [] = '</tbody>';
     }
     $pieces [] = '</table>';
-//     $pieces [] = '<pre>';
-//     $pieces [] = print_r($this->languages,TRUE);
-//     $pieces [] = '</pre>';
     $pieces [] = "<br>" . $this->showTopButton ();
-//     $pieces [] = '</div>';
     return join ( "\n", $style ) . wrap_rex_out("Sprachen - Übersicht", join ( "\n", $pieces ),"l_overview");
   }
   function showAddons() {
