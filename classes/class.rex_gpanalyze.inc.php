@@ -22,7 +22,7 @@ class rex_analyzer {
     $this->html_elements = $this->modules = $this->templates = array ();
     $this->mod_usage = array ();
     $this->temp_usage = array ();
-    $this->dollar_rex_pattern = '|\$REX\s*\[[\'\"](.*)[\'\"]\]|';
+    $this->dollar_rex_pattern = '|\$REX\s*\[[\'\"](.*?)[\'\"]\]|';
     $this->rex_pattern = '(REX_(\w*\[)\d{1,2}\]|REX_(\w*))';
     $this->value_pattern = '|[^_](VALUE\[\d*\])|';
     $this->loadModules ();
@@ -202,9 +202,8 @@ class rex_analyzer {
    * @return string
    */
   function showDollarREX($subject) {
-    $pattern = '|\$REX\s*\[[\'\"](.*)[\'\"]\]|';
     $pieces = array ();
-    $found = preg_match_all ( $pattern, $subject, $matches, PREG_PATTERN_ORDER );
+    $found = preg_match_all ( $this->dollar_rex_pattern, $subject, $matches, PREG_PATTERN_ORDER );
     for($i = 0; $i < $found; $i ++) {
       $pieces [] = "<h6> ---> " . $matches [0] [$i] . "</h6>";
     }
@@ -219,9 +218,8 @@ class rex_analyzer {
    * @return string
    */
   function showREX($subject) {
-    $pattern = '(REX_(\w*\[)\d{1,2}\]|REX_(\w*))';
     $pieces = array ();
-    $found = preg_match_all ( $pattern, $subject, $matches, PREG_PATTERN_ORDER );
+    $found = preg_match_all ( $this->rex_pattern, $subject, $matches, PREG_PATTERN_ORDER );
     for($i = 0; $i < $found; $i ++) {
       $pieces [] = "<h6> ---> " . $matches [0] [$i] . "</h6>";
     }
