@@ -53,7 +53,7 @@ class rex_exporter {
     $this->setSlicePriority ();
     $this->adjustLanguageRelations();
 //     $this->setOffsetToValue ( 1, $this->dest_tables [0], "clang_id" );
-    $this->makeUpModules ();
+//     $this->makeUpModules ();
     $this->export_files = array ();
   }
 
