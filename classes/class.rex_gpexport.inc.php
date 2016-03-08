@@ -52,11 +52,19 @@ class rex_exporter {
     $this->analyze = new rex_analyzer ();
     $this->setSlicePriority ();
     $this->adjustLanguageRelations();
+    $this->adjustTemplateAttributes();
 //     $this->setOffsetToValue ( 1, $this->dest_tables [0], "clang_id" );
 //     $this->makeUpModules ();
     $this->export_files = array ();
   }
 
+  function adjustTemplateAttributes() {
+    $temps = $this->db->getArray("SELECT * FROM `".$this->dest_tables[2]."`");
+    foreach($temps as $k=>$v) {
+      $att = json_encode(unserialize($v['attributes']));
+      $this->db->setQuery("UPDATE `".$this->dest_tables[2]."` SET `attributes` = '".$att."' WHERE `id`=".$v['id']);
+    }
+  }
   function adjustLanguageRelations() {
     /* add Column to language tabel */
     $this->db->setQuery("TRUNCATE TABLE `".$this->dest_tables[5]."`;");
@@ -72,6 +80,7 @@ class rex_exporter {
     $clang = $this->db->getArray("SELECT * FROM `".$this->dest_tables[5]."` ORDER BY `priority` DESC");
     foreach($clang as $v) {
       $this->db->setQuery("UPDATE `".$this->dest_tables[0]."` SET `clang_id` = ".$v['priority']." WHERE `clang_id`= ".$v['old_id'].";");
+      $this->db->setQuery("UPDATE `".$this->dest_tables[1]."` SET `clang_id` = ".$v['priority']." WHERE `clang_id`= ".$v['old_id'].";");
     }
     $this->db->setQuery("ALTER TABLE `".$this->dest_tables[5]."` DROP COLUMN `old_id`");
   }
@@ -223,7 +232,7 @@ class rex_exporter {
       "medialist10" 
     );
     $this->mapping_table ["r4_article_slice"] [] = array (
-      "modultype_id",
+      "modultyp_id",
       "module_id" 
     );
     $this->mapping_table ["r4_module"] [] = array (

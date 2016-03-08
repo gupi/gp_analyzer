@@ -12,9 +12,7 @@ class rex_analyzer {
   var $mod_usage;
   var $templates;
   var $temp_usage;
-  var $dollar_rex_pattern;
-  var $rex_pattern;
-  var $value_pattern;
+  var $pattern;
   var $db;
 
   function __construct() {
@@ -22,9 +20,15 @@ class rex_analyzer {
     $this->html_elements = $this->modules = $this->templates = array ();
     $this->mod_usage = array ();
     $this->temp_usage = array ();
-    $this->dollar_rex_pattern = '|\$REX\s*\[[\'\"](.*?)[\'\"]\]|';
-    $this->rex_pattern = '(REX_(\w*\[)\d{1,2}\]|REX_(\w*))';
-    $this->value_pattern = '|[^_](VALUE\[\d*\])|';
+    
+    $this->pattern = array();
+    $this->pattern['dollar_rex'] = '|\$REX\s*\[[\'\"](.*?)[\'\"]\]|';
+    $this->pattern['rex'] = '(REX_(\w*\[)\d{1,2}\]|REX_(\w*))';
+    $this->pattern['value'] = '|[^_](VALUE\[\d*\])|';
+    $this->pattern['OOAddon'] = '|OOAddon::(.*?)\)|';
+    $this->pattern['php'] = '|<\?php(.*?)\?>|';
+    $this->pattern['temp'] = '|REX_TEMPLATE\[(\d*)\]|';
+    
     $this->loadModules ();
     $this->loadModUsage ();
     $this->loadTemplates ();
@@ -55,12 +59,17 @@ class rex_analyzer {
         'dRO' => array (),
         'RexInput' => array (),
         'RexOutput' => array (),
+        'OOAddonInput' => array (),
+        'OOAddonOutput' => array (),
         'dri_line' => array (),
         'dro_line' => array (),
         'ri_line' => array (),
         'ro_line' => array (),
         'v_line' => array (),
         't_line' => array (),
+        'ooai_line' => array (),
+        'ooao_line' => array (),
+        'ooat_line' => array (),
         'articles' => array () 
       );
     }
@@ -77,9 +86,11 @@ class rex_analyzer {
         'dollarRex' => array (),
         'templates' => array (),
         'PHP' => array (),
+        'OOA' => array (),
         'dr_line' => array (),
         'te_line' => array (),
         'php_line' => array (),
+        'OOA' => array (),
         'articles' => array () 
       );
     }
@@ -91,23 +102,28 @@ class rex_analyzer {
   function loadTempUsage() {
     foreach ( $this->templates as $key => $val ) {
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      preg_match_all ( $this->pattern['dollar_rex'], $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
       foreach($matches as $match) {
         $this->temp_usage [$key] ['dollarRex'][] = $match [0][0];
         $this->temp_usage [$key] ['dr_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
       }
       $matches = array ();
-      preg_match_all ( '|REX_TEMPLATE\[(\d*)\]|', $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      preg_match_all ( $this->pattern['temp'], $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
       foreach($matches as $match) {
         $this->temp_usage [$key] ['templates'][] = $match [0][0];
         $this->temp_usage [$key] ['te_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
       }
-     
       $matches = array ();
-      preg_match_all ( '|<\?php(.*?)\?>|', $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      preg_match_all ( $this->pattern['php'], $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
       foreach($matches as $match) {
         $this->temp_usage [$key] ['PHP'][] = $match [1][0];
         $this->temp_usage [$key] ['php_line'][$match [1][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
+      }
+      $matches = array ();
+      preg_match_all ( $this->pattern['OOAddon'], $val ['content'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      foreach($matches as $match) {
+        $this->temp_usage [$key] ['OOA'][] = $match [0][0];
+        $this->temp_usage [$key] ['ooat_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['content'], 0, $match [0] [1] ) ) ) + 1;
       }
     }    
   }
@@ -118,36 +134,48 @@ class rex_analyzer {
   function loadModUsage() {
     foreach ( $this->modules as $key => $val ) {
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      preg_match_all ( $this->pattern['dollar_rex'], $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
       foreach($matches as $match) {
         $this->mod_usage [$key] ['dollarRexInput'][] = $match [0][0];
         $this->mod_usage [$key] ['dri_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [0] [1] ) ) ) + 1;
         $this->mod_usage [$key] ['dRI'][] = $match [1][0] ;
       }
       $matches = array ();
-      preg_match_all ( $this->dollar_rex_pattern, $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+      preg_match_all ( $this->pattern['dollar_rex'], $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
       foreach($matches as $match) {
         $this->mod_usage [$key] ['dollarRexOutput'][] = $match [0][0];
         $this->mod_usage [$key] ['dro_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['ausgabe'], 0, $match [0] [1] ) ) ) + 1;
         $this->mod_usage [$key] ['dRO'][] = $match [1][0] ;
       }
       $matches = array ();
-      preg_match_all ( $this->rex_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      preg_match_all ( $this->pattern['rex'], $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
       foreach($matches as $match) {
         $this->mod_usage [$key] ['RexInput'][] =  $match [0][0] ;
         $this->mod_usage [$key] ['ri_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [0] [1] ) ) ) + 1;
       }
       $matches = array ();
-      preg_match_all ( $this->rex_pattern, $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      preg_match_all ( $this->pattern['rex'], $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
       foreach($matches as $match) {
         $this->mod_usage [$key] ['RexOutput'][] =  $match [0][0] ;
         $this->mod_usage [$key] ['ro_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['ausgabe'], 0, $match [0] [1] ) ) ) + 1;
       }
       $matches = array ();
-      preg_match_all ( $this->value_pattern, $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      preg_match_all ( $this->pattern['value'], $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
       foreach($matches as $match) {
         $this->mod_usage [$key] ['VALUE'][] = $match [1][0] ;
         $this->mod_usage [$key] ['v_line'][$match [1][0]][] = $match [1] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [1] [1] ) ) ) + 1;
+      }
+      $matches = array ();
+      preg_match_all ( $this->pattern['OOAddon'], $val ['eingabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['OOAInput'][] =  $match [0][0] ;
+        $this->mod_usage [$key] ['ooai_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['eingabe'], 0, $match [0] [1] ) ) ) + 1;
+      }
+      $matches = array ();
+      preg_match_all ( $this->pattern['OOAddon'], $val ['ausgabe'], $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+      foreach($matches as $match) {
+        $this->mod_usage [$key] ['OOAOutput'][] =  $match [0][0] ;
+        $this->mod_usage [$key] ['ooao_line'][$match [0][0]][] = $match [0] [1] - strlen ( str_replace ( "\n", "", substr ( $val ['ausgabe'], 0, $match [0] [1] ) ) ) + 1;
       }
     }
   }
@@ -262,11 +290,17 @@ class rex_analyzer {
       foreach($this->mod_usage[$mid]['ri_line'] as $k=>$v) {
         $pieces [] = "--> ".$k."<br>";
       }
+      foreach($this->mod_usage[$mid]['ooai_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
       $pieces [] = "<h5>Modul-Ausgabe</h5>";
       foreach($this->mod_usage[$mid]['dro_line'] as $k=>$v) {
         $pieces [] = "--> ".$k."<br>";
       }
       foreach($this->mod_usage[$mid]['ro_line'] as $k=>$v) {
+        $pieces [] = "--> ".$k."<br>";
+      }
+      foreach($this->mod_usage[$mid]['ooao_line'] as $k=>$v) {
         $pieces [] = "--> ".$k."<br>";
       }
       $pieces [] = "<hr>";
@@ -360,8 +394,19 @@ class rex_analyzer {
         $pieces [] = "<tr>";
         $pieces[] = "<td class='first'>PHP</td><td>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
         $pieces [] = "</tr>";
+      } 
+      foreach ($val['ooat_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>OOAddon</td><td>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
       }            
       $pieces [] = "</table>";
+      $att = unserialize($this->templates[$key]['attributes']);
+      if (!$att) {
+        $att = json_decode($this->templates[$key]['attributes'],TRUE);
+      }
+//       $att = $this->templates[$key];
+      $pieces [] = "<pre>".print_r($att,TRUE)."</pre>";
       $pieces [] = "<hr>";
     }
     $pieces [] = "<br>" . $this->showTopButton ();
@@ -402,6 +447,11 @@ class rex_analyzer {
         $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
         $pieces [] = "</tr>";
       }
+      foreach ($v['ooai_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
+      }
       $pieces [] = "</tbody></table><hr>";
       $pieces [] = "<table>";
       $pieces [] = "<thead><tr><th colspan='2'>Ausgabe:</th></tr></tbody>";
@@ -412,6 +462,11 @@ class rex_analyzer {
         $pieces [] = "</tr>";
       }
       foreach ($v['ro_line'] as $f=>$l) {
+        $pieces [] = "<tr>";
+        $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
+        $pieces [] = "</tr>";
+      }
+      foreach ($v['ooao_line'] as $f=>$l) {
         $pieces [] = "<tr>";
         $pieces[] = "<td class='first'>".$f ."</td><td>Zeile: ".join("; ",$l)."</td></tr>";
         $pieces [] = "</tr>";
