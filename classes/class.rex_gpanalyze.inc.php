@@ -401,12 +401,6 @@ class rex_analyzer {
         $pieces [] = "</tr>";
       }            
       $pieces [] = "</table>";
-      $att = unserialize($this->templates[$key]['attributes']);
-      if (!$att) {
-        $att = json_decode($this->templates[$key]['attributes'],TRUE);
-      }
-//       $att = $this->templates[$key];
-      $pieces [] = "<pre>".print_r($att,TRUE)."</pre>";
       $pieces [] = "<hr>";
     }
     $pieces [] = "<br>" . $this->showTopButton ();
